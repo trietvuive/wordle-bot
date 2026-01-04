@@ -1,6 +1,7 @@
 # Wordle Bot
 
-Command-line Wordle game simulator with an optimal solving bot.
+Wordle is NP-hard, so let's solve it
+https://arxiv.org/abs/2203.16713
 
 ## Installation
 
