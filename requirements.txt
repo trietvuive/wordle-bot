@@ -1,4 +1,0 @@
-# Wordle Game Simulator
-# This project uses only Python standard library modules
-# No external dependencies required
-
