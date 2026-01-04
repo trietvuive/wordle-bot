@@ -1,0 +1,2 @@
+# Code formatting
+black>=23.0.0
