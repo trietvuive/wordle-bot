@@ -11,16 +11,16 @@ from typing import List, Tuple, Dict, Set, Optional
 
 
 class Color(Enum):
-    GREEN = "green"  # Correct letter, correct position
-    YELLOW = "yellow"  # Correct letter, wrong position
-    GRAY = "gray"  # Letter not in word
+    GREEN = "green"
+    YELLOW = "yellow"
+    GRAY = "gray"
 
 
 class Colors:
-    GREEN = "\033[92m"  # Correct letter, correct position
-    YELLOW = "\033[93m"  # Correct letter, wrong position
-    GRAY = "\033[90m"  # Letter not in word
-    RESET = "\033[0m"  # Reset color
+    GREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    GRAY = "\033[90m"
+    RESET = "\033[0m"
     BOLD = "\033[1m"
     WHITE = "\033[97m"
 
