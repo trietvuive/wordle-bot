@@ -35,10 +35,9 @@ class WordleBot:
         self.la_words = self._load_word_list(WORDLE_LA_FILE)
         self.ta_words = self._load_word_list(WORDLE_TA_FILE)
         self.all_words = [w.upper() for w in self.la_words + self.ta_words]
-        self.possible_words = set(self.la_words)  # Only La words can be targets
+        self.possible_words = set(self.la_words)
         self._spinner_active = False
         self._spinner_thread = None
-        # Create a WordleGame instance for feedback generation
         self._game_helper = WordleGame()
 
     @staticmethod
@@ -58,7 +57,6 @@ class WordleBot:
         Returns a list of tuples: (letter, color)
         Uses WordleGame's feedback method.
         """
-        # Temporarily set target to get feedback
         original_target = self._game_helper.target
         self._game_helper.target = target.upper()
         feedback = self._game_helper._get_feedback(guess.upper())
@@ -79,35 +77,8 @@ class WordleBot:
         self, word: str, guess: str, feedback: List[Tuple[str, Color]]
     ) -> bool:
         """Check if a word matches the given feedback pattern."""
-        word_list = list(word)
-        guess_list = list(guess)
-
-        # Check green positions (exact matches)
-        for i, (letter, color) in enumerate(feedback):
-            if color == Color.GREEN:
-                if word_list[i] != guess_list[i]:
-                    return False
-                word_list[i] = None  # Mark as used
-
-        # Check yellow positions (letter in word but wrong position)
-        for i, (letter, color) in enumerate(feedback):
-            if color == Color.YELLOW:
-                if guess_list[i] not in word_list:
-                    return False
-                # Can't be in the same position
-                if word_list[i] == guess_list[i]:
-                    return False
-                # Remove first occurrence
-                if guess_list[i] in word_list:
-                    word_list[word_list.index(guess_list[i])] = None
-
-        # Check gray positions (letter not in word)
-        for i, (letter, color) in enumerate(feedback):
-            if color == Color.GRAY:
-                if guess_list[i] in word_list:
-                    return False
-
-        return True
+        expected_feedback = self._get_feedback(guess, word)
+        return expected_feedback == feedback
 
     def _calculate_entropy(self, guess: str, possible_words: Set[str]) -> float:
         """
@@ -181,7 +152,6 @@ class WordleBot:
         if len(possible_words) == 1:
             return list(possible_words)[0]
 
-        # Start spinner if requested
         if show_spinner:
             self._spinner_active = True
             self._spinner_thread = threading.Thread(
@@ -190,25 +160,20 @@ class WordleBot:
             self._spinner_thread.start()
 
         try:
-            # If few words remain, only consider possible words
             if len(possible_words) <= 2:
                 candidates = list(possible_words)
             else:
-                # Consider both possible words and all valid guesses
                 candidates = list(possible_words) + list(valid_guesses)
-                # Remove duplicates while preserving order
                 seen = set()
                 candidates = [w for w in candidates if not (w in seen or seen.add(w))]
 
             best_guess = None
             best_score = float("inf")
 
-            # Score each candidate
             for guess in candidates:
                 expected_remaining = self._calculate_expected_remaining(
                     guess, possible_words
                 )
-                # Prefer words that are still possible (could be the answer)
                 bonus = 0 if guess in possible_words else 0.5
                 score = expected_remaining + bonus
 
@@ -218,7 +183,6 @@ class WordleBot:
 
             return best_guess or candidates[0]
         finally:
-            # Stop spinner
             if show_spinner:
                 self._spinner_active = False
                 if self._spinner_thread:
@@ -247,11 +211,8 @@ class WordleBot:
         guesses = []
 
         while True:
-            # Choose optimal guess
             guess = self._choose_optimal_guess(possible_words, valid_guesses)
             guesses.append(guess)
-
-            # Get feedback
             feedback = self._get_feedback(guess, target)
 
             if verbose:
@@ -267,11 +228,9 @@ class WordleBot:
                 )
                 print(f"Guess {len(guesses)}: {guess} {feedback_str}")
 
-            # Check if solved
             if guess == target:
                 return len(guesses)
 
-            # Filter possible words based on feedback
             possible_words = self._filter_words(possible_words, guess, feedback)
 
             if not possible_words:
@@ -300,22 +259,17 @@ class WordleBot:
         valid_guesses = set(game.valid_guesses)
 
         while not game.is_game_over():
-            # Choose optimal guess
             guess = self._choose_optimal_guess(possible_words, valid_guesses)
 
-            # Make the guess
             if not game.make_guess(guess):
                 print(f"Error: Invalid guess {guess}")
                 break
 
-            # Get feedback from the game
             feedback = game.all_guesses[-1]
 
-            # Check if won
             if game.is_won():
                 return (game.attempts, True)
 
-            # Filter possible words
             possible_words = self._filter_words(possible_words, guess, feedback)
 
             if not possible_words:
@@ -343,7 +297,6 @@ class WordleBot:
 
         print("Continuing from previous guesses...\n")
 
-        # Process previous guesses
         for guess, feedback_str in previous_guesses:
             guess = guess.upper()
             if len(feedback_str) != 5 or not all(
@@ -354,25 +307,22 @@ class WordleBot:
 
             guesses.append(guess)
 
-            # Convert feedback to Color enum
             feedback = []
             for i, char in enumerate(feedback_str.upper()):
                 if char == "G":
                     feedback.append((guess[i], Color.GREEN))
                 elif char == "Y":
                     feedback.append((guess[i], Color.YELLOW))
-                else:  # X
+                else:
                     feedback.append((guess[i], Color.GRAY))
 
             if verbose:
                 print(f"Previous guess {len(guesses)}: {guess} {feedback_str.upper()}")
 
-            # Check if already solved
             if all(c == Color.GREEN for _, c in feedback):
                 print(f"\nAlready solved in {len(guesses)} guesses!")
                 return len(guesses)
 
-            # Filter possible words based on feedback
             possible_words = self._filter_words(possible_words, guess, feedback)
 
             if not possible_words:
@@ -385,17 +335,14 @@ class WordleBot:
                     print(f"Possible words: {', '.join(sorted(possible_words))}")
                 print()
 
-        # Continue solving from current state
         print("Continuing to solve...\n")
 
         while True:
-            # Choose optimal guess
             guess = self._choose_optimal_guess(possible_words, valid_guesses)
             guesses.append(guess)
 
             print(f"Guess {len(guesses)}: {guess}")
 
-            # Get feedback from user
             while True:
                 feedback_input = input("Feedback (G/Y/X): ").strip().upper()
                 if len(feedback_input) == 5 and all(c in "GYX" for c in feedback_input):
@@ -404,22 +351,19 @@ class WordleBot:
                     "Invalid input. Enter 5 characters: G (green), Y (yellow), X (gray)"
                 )
 
-            # Convert feedback to Color enum
             feedback = []
             for i, char in enumerate(feedback_input):
                 if char == "G":
                     feedback.append((guess[i], Color.GREEN))
                 elif char == "Y":
                     feedback.append((guess[i], Color.YELLOW))
-                else:  # X
+                else:
                     feedback.append((guess[i], Color.GRAY))
 
-            # Check if solved (all green)
             if all(c == Color.GREEN for _, c in feedback):
                 print(f"\nSolved in {len(guesses)} guesses!")
                 return len(guesses)
 
-            # Filter possible words based on feedback
             possible_words = self._filter_words(possible_words, guess, feedback)
 
             if not possible_words:
@@ -451,13 +395,11 @@ class WordleBot:
         print("Example: GYXXG means first letter green, second yellow, rest gray\n")
 
         while True:
-            # Choose optimal guess
             guess = self._choose_optimal_guess(possible_words, valid_guesses)
             guesses.append(guess)
 
             print(f"Guess {len(guesses)}: {guess}")
 
-            # Get feedback from user
             while True:
                 feedback_input = input("Feedback (G/Y/X): ").strip().upper()
                 if len(feedback_input) == 5 and all(c in "GYX" for c in feedback_input):
@@ -466,22 +408,19 @@ class WordleBot:
                     "Invalid input. Enter 5 characters: G (green), Y (yellow), X (gray)"
                 )
 
-            # Convert feedback to Color enum
             feedback = []
             for i, char in enumerate(feedback_input):
                 if char == "G":
                     feedback.append((guess[i], Color.GREEN))
                 elif char == "Y":
                     feedback.append((guess[i], Color.YELLOW))
-                else:  # X
+                else:
                     feedback.append((guess[i], Color.GRAY))
 
-            # Check if solved (all green)
             if all(c == Color.GREEN for _, c in feedback):
                 print(f"\nSolved in {len(guesses)} guesses!")
                 return len(guesses)
 
-            # Filter possible words based on feedback
             possible_words = self._filter_words(possible_words, guess, feedback)
 
             if not possible_words:
@@ -510,17 +449,14 @@ class WordleBot:
         guesses = []
 
         while not game.is_game_over():
-            # Choose optimal guess
             guess = self._choose_optimal_guess(possible_words, valid_guesses)
             guesses.append(guess)
 
-            # Make the guess
             if not game.make_guess(guess):
                 if verbose:
                     print(f"Error: Invalid guess {guess}")
                 break
 
-            # Get feedback from the game
             feedback = game.all_guesses[-1]
 
             if verbose:
@@ -532,13 +468,11 @@ class WordleBot:
                 )
                 print(f"Guess {len(guesses)}: {guess} {feedback_str}")
 
-            # Check if won
             if game.is_won():
                 if verbose:
                     print(f"\nSolved in {len(guesses)} guesses!")
                 return len(guesses)
 
-            # Filter possible words
             possible_words = self._filter_words(possible_words, guess, feedback)
 
             if not possible_words:
@@ -597,7 +531,6 @@ def main():
     bot = WordleBot()
 
     if args.state:
-        # Continue from previous state
         try:
             previous_guesses = []
             for item in args.state.split(","):
@@ -611,16 +544,13 @@ def main():
             print(f"Error parsing state: {e}")
             sys.exit(1)
     elif args.interactive:
-        # Interactive mode: user provides feedback
         bot.solve_interactive(verbose=True)
     elif args.play:
-        # Play mode: bot solves a game without knowing the answer
         game = WordleGame()
         guesses = bot.solve_with_game(game, verbose=True)
         print(f"\nTarget was: {game.target}")
         print(f"Solved in {guesses} guesses!")
     elif args.stats or args.games > 1:
-        # Run multiple games and show statistics
         results = []
         for i in range(args.games):
             guesses = bot.solve(verbose=args.verbose)
@@ -635,7 +565,6 @@ def main():
             print(f"Max guesses: {max(results)}")
             print(f"Distribution: {dict(Counter(results))}")
     else:
-        # Single game
         guesses = bot.solve(target=args.target, verbose=True)
         print(f"\nSolved in {guesses} guesses!")
 

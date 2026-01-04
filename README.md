@@ -3,6 +3,8 @@
 Wordle is NP-hard, so let's solve it
 https://arxiv.org/abs/2203.16713
 
+Please report all bugs to /dev/null
+
 ## Installation
 
 No external dependencies required. Uses Python 3 standard library.
